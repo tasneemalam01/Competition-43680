@@ -1,0 +1,190 @@
+---
+title: 'Competition #43680 – Alam, Tasneem'
+author: | 
+  | Tasneem Alam
+  | Email: tasneem.alam@mail.mcgill.ca
+
+
+date: "`r format(Sys.time(), ' %B %d, %Y')`"
+
+output:
+  pdf_document:
+    fig_caption: yes
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(naniar)
+library(ggstats)
+library(reshape2)
+library(gridExtra)
+library(lubridate)
+```
+
+
+This report presents analyses on the Los Angeles building permit inspection datasets. R statistical programming was used to carry out the analyses. The latest Building and Safety Permit and the old Building and Safety Permit Information datasets were merged interms of the permit number in this analysis. This way the additional information on the contractors such as their city were incorporated in the analysis.
+
+## Question 1
+
+```{r echo=FALSE}
+LA_permit<-  read.csv("E:\\Job search\\Manitoba_ds\\LA_permit_info.csv", header = TRUE)
+Old_LA_permit<-  read.csv("E:\\Job search\\Manitoba_ds\\permit_info.csv", header = TRUE)
+
+LA_permit$Inspection.Date <- mdy(LA_permit$Inspection.Date)
+
+LA_permit$Permit.Status<-factor(LA_permit$Permit.Status)
+LA_permit<-LA_permit %>% 
+  mutate(status = ifelse(Permit.Status=='CofO Issued','CofO Issued',
+                         ifelse(Permit.Status=='Issued', 'Permit Issued',
+                                ifelse(Permit.Status=='Permit Finaled', 'Permit Finaled', 'Other'))))
+```
+
+
+\begin{table}[H] \centering 
+  \caption{Percentages of various permit Status} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} lc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & Permit Status & Percentage (\%) \\ 
+\hline \\[-1.8ex] 
+ CofO Issued & $5.03$ \\ 
+ Permit Finaled & $17.03$ \\ 
+ Permit Issued & $69.50$ \\ 
+ Other & $8.43$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+
+```{r echo=FALSE,fig.height=5, fig.width=5, warning=FALSE, fig.cap="\\label{fig1}Percentages of various permit Status"}
+LA_permit%>%
+  count(status)%>%mutate(pct= prop.table(n) * 100)%>%
+  ggplot(aes(x = status, y = pct))+
+  geom_bar(stat="identity", fill="steelblue")+geom_text(aes(label=paste0(sprintf("%1.0f", pct),"%")),
+                                      position=position_stack(vjust=0.5), color="black") + 
+  theme_bw()+ylab("Percentages") +xlab("Status") +
+  ggtitle("Percentages of various permit Status")+
+  theme(legend.position = "bottom", plot.title = element_text(size = 9))+
+  coord_flip()
+
+```
+
+The table and barplots show that permits were issued in 69\%inspection and finalized in 17\% inspections. The certification of occupancy (CofO) was issued in 5\% inspections. In other cases the permits were not issued or finalized, indicating the projects having obstacles towards completion.
+
+## Question 2
+
+```{r, echo=FALSE}
+dt <- data.table(coords = LA_permit$Latitude.Longitude)
+
+# Extract latitude and longitude
+geo<-dt[, c("latitude", "longitude") := tstrsplit(gsub("[()]", "", coords), ", ", fixed = TRUE)]
+
+# Convert latitude and longitude to numeric
+geo<-dt[, `:=`(latitude = as.numeric(latitude), longitude = as.numeric(longitude))]
+
+# Inspect the results
+#head(geo)
+LA_permit<- cbind(LA_permit, geo)
+
+Old_LA_permit$PERMIT<- factor(Old_LA_permit$PCIS.Permit..)
+LA_permit$PERMIT<- factor(LA_permit$PERMIT)
+
+old_permit<- Old_LA_permit%>% select(c(PERMIT,Contractor.City, Contractor.State))
+
+permit_data<-merge(LA_permit, old_permit, by="PERMIT")
+
+
+```
+
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} lc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & State & Percentage of inspection \\ 
+\hline \\[-1.8ex] 
+  & $21.97$ \\ 
+ AL & $0.001$ \\ 
+ AR & $0.001$ \\ 
+ AZ & $0.28$ \\ 
+ C & $0.0004$ \\ 
+ CA & $75.93$ \\ 
+ CO & $0.17$ \\ 
+ CS & $0.0004$ \\ 
+ CT & $0.001$ \\ 
+ FL & $0.10$ \\ 
+ GA & $0.14$ \\ 
+ HI & $0.001$ \\ 
+ ID & $0.02$ \\ 
+ IL & $0.07$ \\ 
+ IN & $0.01$ \\ 
+ KS & $0.01$ \\ 
+ KY & $0.02$ \\ 
+ LA & $0.005$ \\ 
+ MA & $0.09$ \\ 
+ MD & $0.003$ \\ 
+ MI & $0.03$ \\ 
+ MN & $0.06$ \\ 
+ MO & $0.04$ \\ 
+ MS & $0.02$ \\ 
+ MT & $0.004$ \\ 
+ NC & $0.01$ \\ 
+ NE & $0.01$ \\ 
+ NJ & $0.07$ \\ 
+ NM & $0.02$ \\ 
+ NV & $0.08$ \\ 
+ NY & $0.04$ \\ 
+ OH & $0.004$ \\ 
+ OK & $0.002$ \\ 
+ OR & $0.06$ \\ 
+ PA & $0.03$ \\ 
+ SC & $0.001$ \\ 
+ TN & $0.13$ \\ 
+ TX & $0.20$ \\ 
+ UT & $0.08$ \\ 
+ VA & $0.02$ \\ 
+ WA & $0.23$ \\ 
+ WI & $0.03$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
+
+The table shows that around 75.93\% of the inspection occurred in the state of California. The exploratory analysis also revealed that there were 481,120 permits which did not get any inspection. 
+
+## Question 3
+
+In order to quantify the relationship between between a contractor’s place of origin and their inspection outcome history, the permit status variable can be considered as a binary variable such that,
+$$
+
+\text{Permit status}&=1, \text{CofO issued, permit issued} \text{and} \text{0, otherwise}
+
+$$
+
+The permit status would thus indicate whether the project is on track of completion or completed. The contractor's city can be used as the contractor's place of origin and their location. Due to time limitation, the model was not estimated in this analysis. However, the following logistic regression model could be used to quantify the relationship,
+
+$$
+\text{logit}({\text{Permit status}})=\alpha+\beta \text{city}.
+$$
+
+In this model, the odds of a project on track of completion or completed would be estimated based on the contractors' city. Based on the model, the odds of a project on track of completion or completed would be $(e^{\beta}-1)\%$ higher or $(1-e^{\beta})\%$ lower for a specific city than the reference city. Further analyses could involve variable selection based on methods such as LASSO or ridge regression.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
